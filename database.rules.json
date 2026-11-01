@@ -1,0 +1,10 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "hogar": {
+      ".read": "auth != null && (auth.token.email == 'CORREO_DE_ALBERTO' || auth.token.email == 'CORREO_DE_JARA')",
+      ".write": "auth != null && (auth.token.email == 'CORREO_DE_ALBERTO' || auth.token.email == 'CORREO_DE_JARA')"
+    }
+  }
+}

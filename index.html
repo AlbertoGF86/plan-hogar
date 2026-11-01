@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141A2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hogar">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Plan del hogar</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabecera con selector de semana, dos tarjetas de persona lado a lado (una columna en móvil), marcador con niveles de premio, rotación de las próximas semanas. */
+:root{
+  color-scheme:light;
+  --bg:#ECEFF5; --surface:#FFFFFF; --surface-2:#F3F5FA; --ink:#141A2E; --ink-2:#4B5575; --line:#D6DBE8;
+  --alb:#2C52D1; --alb-soft:#E3E9FB; --jar:#8B3BBE; --jar-soft:#F0E4F8; --on-person:#FFFFFF;
+  --r-dot:#D64545; --a-dot:#E8A91A; --g-dot:#2EA564;
+  --red-soft:#FBE4E4; --amber-soft:#FFF1CC; --green-soft:#DDF3E5;
+  --btn:#141A2E; --btn-ink:#FFFFFF; --warn-bg:#FFF4D6; --warn-line:#E8C766;
+  --font-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1120; --surface:#161B2E; --surface-2:#1D2339; --ink:#E9EDFA; --ink-2:#A2ACCB; --line:#2B3354;
+    --alb:#86A0FF; --alb-soft:#1F2A52; --jar:#CB93F2; --jar-soft:#3A2450; --on-person:#0D1120;
+    --r-dot:#FF7B7B; --a-dot:#F5C04A; --g-dot:#4CC38A;
+    --red-soft:#4A2328; --amber-soft:#4A3A12; --green-soft:#173D2A;
+    --btn:#E9EDFA; --btn-ink:#0D1120; --warn-bg:#3A3015; --warn-line:#7A6422;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1120; --surface:#161B2E; --surface-2:#1D2339; --ink:#E9EDFA; --ink-2:#A2ACCB; --line:#2B3354;
+  --alb:#86A0FF; --alb-soft:#1F2A52; --jar:#CB93F2; --jar-soft:#3A2450; --on-person:#0D1120;
+  --r-dot:#FF7B7B; --a-dot:#F5C04A; --g-dot:#4CC38A;
+  --red-soft:#4A2328; --amber-soft:#4A3A12; --green-soft:#173D2A;
+  --btn:#E9EDFA; --btn-ink:#0D1120; --warn-bg:#3A3015; --warn-line:#7A6422;
+  color-scheme:dark;
+}
+html{-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body);
+  padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:max(56px,env(safe-area-inset-bottom,0px));min-height:100vh;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(32px,7vw,46px);line-height:1.02;font-weight:700}
+h2{font-size:22px;line-height:1.15;font-weight:700}
+p{margin:0}
+.kicker{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)}
+.small{font-size:13px}
+
+.top{display:flex;flex-wrap:wrap;gap:14px 20px;justify-content:space-between;align-items:flex-end}
+.top .title{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sync{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2)}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--g-dot)}
+.sync.local i,.sync.wait i{background:var(--a-dot)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--ink-2);padding:8px 14px;min-height:40px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
+.who-label{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+
+.btn{font:inherit;font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;min-height:40px;cursor:pointer}
+.btn.primary{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.weekbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.weekbar .lbl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.weekbar .range{font-family:var(--font-display);font-weight:700;font-size:22px;line-height:1.1}
+.weekbar .nav{display:flex;gap:8px;flex-wrap:wrap}
+
+.banner{border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between}
+.banner p{min-width:0;flex:1 1 260px}
+.pick{display:flex;flex-direction:column;gap:12px}
+.pick .row{display:flex;flex-wrap:wrap;gap:10px}
+.pick .btn{flex:1 1 140px;min-height:52px;font-size:16px}
+
+.people{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:16px}
+.person{--pc:var(--alb);--pc-soft:var(--alb-soft);display:flex;flex-direction:column;gap:6px}
+.person.jara{--pc:var(--jar);--pc-soft:var(--jar-soft)}
+.phead{display:flex;align-items:center;gap:12px}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--pc);color:var(--on-person);display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:20px;flex:none}
+.phead .nm{display:flex;flex-direction:column;min-width:0}
+.phead h2{color:var(--pc)}
+.phead .cnt{margin-left:auto;font-family:var(--font-mono);font-size:14px;color:var(--ink-2);white-space:nowrap}
+.you{font-size:12px;font-weight:600;background:var(--pc-soft);color:var(--ink);border-radius:999px;padding:2px 9px;margin-left:6px;vertical-align:middle}
+.tasks{list-style:none;margin:6px 0 0;padding:0}
+.task{display:grid;grid-template-columns:44px 1fr auto;column-gap:12px;row-gap:10px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.chk{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:transparent;display:grid;place-items:center;cursor:pointer;padding:0}
+.chk[aria-pressed="true"]{background:var(--pc);border-color:var(--pc);color:var(--on-person)}
+.chk:disabled{cursor:default}
+.chk:disabled:not([aria-pressed="true"]){border-style:dashed}
+.tname{font-weight:600;font-size:16px;line-height:1.25}
+.tsub{font-size:13px;color:var(--ink-2);line-height:1.35}
+.tag{display:inline-block;font-size:12px;font-weight:600;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:0 7px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.pts{font-family:var(--font-mono);font-size:15px;color:var(--ink-2);white-space:nowrap}
+.task[data-done="1"] .pts{color:var(--ink);font-weight:500}
+.rate{grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rate .who{font-size:12px;color:var(--ink-2);width:100%}
+.rb,.chip{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--surface);color:var(--ink);display:inline-flex;gap:7px;align-items:center;min-height:34px}
+.rb{cursor:pointer}
+.chip{min-height:30px;padding:2px 10px}
+.rb i,.chip i{width:10px;height:10px;border-radius:50%;background:var(--dot);flex:none}
+.rb[aria-pressed="true"],.chip.on{background:var(--soft);border-color:var(--dot);font-weight:600}
+.r{--dot:var(--r-dot);--soft:var(--red-soft)}
+.a{--dot:var(--a-dot);--soft:var(--amber-soft)}
+.g{--dot:var(--g-dot);--soft:var(--green-soft)}
+.chip.none{color:var(--ink-2);border-style:dashed}
+.chip.none i{background:transparent;border:1px solid var(--ink-2)}
+
+.score{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sc{display:flex;flex-direction:column;gap:2px;min-width:0}
+.sc .n{font-family:var(--font-mono);font-weight:500;font-size:clamp(34px,9vw,52px);line-height:1;font-variant-numeric:tabular-nums}
+.sc.alberto .nm{color:var(--alb);font-weight:700;font-family:var(--font-display);font-size:18px}
+.sc.jara .nm{color:var(--jar);font-weight:700;font-family:var(--font-display);font-size:18px}
+.bar{height:12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.bar b{display:block;height:100%;background:var(--btn);border-radius:999px;min-width:0}
+.sec{display:flex;flex-direction:column;gap:14px}
+.levels{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.lv{display:grid;grid-template-columns:28px 76px 1fr;gap:10px;align-items:center}
+.lv .dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:transparent}
+.lv.on .dot{background:var(--btn);border-color:var(--btn);color:var(--btn-ink)}
+.lv .th{font-family:var(--font-mono);font-size:14px;color:var(--ink-2)}
+.lv.on .th{color:var(--ink);font-weight:500}
+input[type="text"],input[type="email"],input[type="password"]{font:inherit;width:100%;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 10px;min-height:40px}
+input[type="text"]:read-only{background:var(--surface-2)}
+.duel{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+.rules div{background:var(--surface-2);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rules b{font-family:var(--font-mono);font-weight:500}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:460px}
+th,td{text-align:left;padding:10px 10px;border-top:1px solid var(--line);vertical-align:top;font-size:14px}
+th{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);border-top:0;font-weight:600}
+tr.cur td{background:var(--surface-2)}
+td .tk{display:block}
+
+.settings{display:flex;flex-direction:column;gap:14px}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+legend{font-weight:600;padding:0;margin-bottom:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.opt input{margin-top:4px;width:18px;height:18px;flex:none}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.login{display:flex;flex-direction:column;gap:14px;max-width:420px}
+.login label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+.err{background:var(--red-soft);border-radius:8px;padding:8px 10px}
+@media (prefers-reduced-motion:no-preference){.chk,.rb,.bar b{transition:background .15s,border-color .15s,width .3s}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite"></div>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+(function(){
+"use strict";
+var PEOPLE={alberto:{name:"Alberto",initial:"A"},jara:{name:"Jara",initial:"J"}};
+var TASKS={
+  bano:{name:"Baño",sub:"Lavabo, ducha o bañera, inodoro y suelo",pts:10},
+  lavadoras:{name:"Lavadoras",sub:"Poner, tender y doblar la colada de la semana",pts:10},
+  suelo:{name:"Suelo",sub:"Aspirar y fregar la casa",pts:10},
+  cocina:{name:"Cocina",sub:"Encimera, fuegos, fregadero y suelo",pts:10},
+  basura:{name:"Sacar la basura",sub:"Cada viernes",pts:5}
+};
+var RATES={rojo:{label:"Mal",cls:"r",bonus:0},amarillo:{label:"Mejorable",cls:"a",bonus:2},verde:{label:"Bien",cls:"g",bonus:5}};
+var LEVELS=[100,200,300,400,500];
+var DEFAULT_CFG={flip:false,trashFlip:false,season:"2026-W45",
+  r1:"Elegir la película o serie de la noche",
+  r2:"Desayuno o brunch fuera de casa",
+  r3:"Una tarde libre sin tareas ni obligaciones",
+  r4:"Cena en un restaurante a elegir",
+  r5:"Escapada de fin de semana",
+  duel:"Quien tenga más puntos al llegar a 500 elige el destino de la escapada y se libra de una semana de tareas."};
+var REF=new Date(2026,10,2);
+var DAY=864e5;
+var app=document.getElementById("app");
+
+var S={cfg:Object.assign({},DEFAULT_CFG),weeks:{}};
+var me=null,db=null,mode="loading",readOnly=false,syncNote="",synced=false,pending=false;
+var viewMon=null,settingsOpen=false,ns=null,queues={};
+
+function lsGet(k){try{return window.localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{window.localStorage.setItem(k,v)}catch(e){}}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function merge(t,p){for(var k in p){if(p[k]&&typeof p[k]==="object"&&!Array.isArray(p[k])){t[k]=merge(t[k]&&typeof t[k]==="object"?t[k]:{},p[k])}else{t[k]=p[k]}}return t}
+
+/* semanas */
+function addDays(d,n){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x}
+function monOf(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function weekN(mon){return Math.round((mon-REF)/(7*DAY))}
+function jan4Mon(y){return monOf(new Date(y,0,4))}
+function isoId(mon){var th=addDays(mon,3),y=th.getFullYear();var w=1+Math.round((mon-jan4Mon(y))/(7*DAY));return y+"-W"+(w<10?"0":"")+w}
+function monFromId(id){var m=/^(\d{4})-W(\d{2})$/.exec(id);if(!m)return null;return addDays(jan4Mon(+m[1]),(+m[2]-1)*7)}
+function fmt(d,o){return d.toLocaleDateString("es-ES",o)}
+function startMon(){var t=monOf(new Date());var s=monFromId(S.cfg.season);return s&&s>t?s:t}
+
+/* reparto */
+function assignment(mon){
+  var n=weekN(mon),a=(((n%2)+2)%2)===0;
+  if(S.cfg.flip)a=!a;
+  var heavy=a?"alberto":"jara",other=a?"jara":"alberto";
+  var trash=S.cfg.trashFlip?other:heavy;
+  var out={alberto:[],jara:[]};
+  out[heavy].push("bano","lavadoras");
+  out[other].push("suelo","cocina");
+  out[trash].push("basura");
+  return out;
+}
+function wk(id){var w=S.weeks[id];return w?{done:w.done||{},rate:w.rate||{}}:{done:{},rate:{}}}
+function taskPts(w,t){
+  if(!w.done[t])return 0;
+  var r=w.rate[t];
+  return TASKS[t].pts+(r&&RATES[r]?RATES[r].bonus:0);
+}
+function weekPoints(mon,who){
+  var w=wk(isoId(mon)),list=assignment(mon)[who],pts=0,all=true,red=false;
+  list.forEach(function(t){
+    pts+=taskPts(w,t);
+    if(!w.done[t])all=false;else if(w.rate[t]==="rojo")red=true;
+  });
+  if(all&&!red)pts+=10;
+  return pts;
+}
+function seasonPoints(who){
+  var total=0;
+  Object.keys(S.weeks).forEach(function(id){
+    if(id<S.cfg.season)return;
+    var m=monFromId(id);if(m)total+=weekPoints(m,who);
+  });
+  return total;
+}
+
+/* guardado */
+var localMsg="Falta conectar Firebase (archivo config.js). Mientras tanto, los datos solo se guardan en este navegador.";
+var ref=null,online=true,attached=false,firstSnap=false,loginErr="",loginEm="";
+function saveLocal(){lsSet("casa-plan-v1",JSON.stringify({cfg:S.cfg,weeks:S.weeks}))}
+function flatten(prefix,obj,out){for(var k in obj){var v=obj[k];if(v&&typeof v==="object")flatten(prefix+k+"/",v,out);else out[prefix+k]=v}return out}
+function writeFailed(e){
+  if(e&&(e.code==="PERMISSION_DENIED"||/permission_denied/i.test(e.message||""))){
+    readOnly=true;syncNote="Firebase rechazó el cambio. Revisa las reglas de la base de datos y que tu correo esté en ellas.";
+  }else{syncNote="No se pudo guardar el último cambio. Comprueba la conexión y vuelve a intentarlo."}
+  render();
+}
+function send(updates){
+  if(mode!=="shared"||!ref){saveLocal();return}
+  ref.update(updates).catch(writeFailed);
+}
+function patchWeek(id,patch){
+  S.weeks[id]=merge(clone(S.weeks[id]||{done:{},rate:{}}),patch);
+  render();
+  send(flatten("weeks/"+id+"/",patch,{}));
+}
+function patchCfg(patch){
+  S.cfg=merge(clone(S.cfg),patch);
+  render();
+  send(flatten("cfg/",patch,{}));
+}
+function loginCard(){
+  return '<section class="card"><form class="login" id="loginForm" novalidate><h2>Entrar</h2>'+
+    '<p class="muted">Usa el correo y la contraseña que creaste en Firebase. Solo hace falta la primera vez en cada móvil.</p>'+
+    (loginErr?'<p class="err" role="alert">'+esc(loginErr)+'</p>':"")+
+    '<label for="em">Correo<input type="email" id="em" name="em" autocomplete="username" autocapitalize="none" inputmode="email" value="'+esc(loginEm)+'" required></label>'+
+    '<label for="pw">Contraseña<input type="password" id="pw" name="pw" autocomplete="current-password" required></label>'+
+    '<button type="submit" class="btn primary" data-key="login" style="min-height:48px;font-size:16px">Entrar</button></form></section>';
+}
+
+/* vista */
+function checkSvg(){return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
+function weekLabel(mon){
+  var diff=Math.round((mon-monOf(new Date()))/(7*DAY));
+  if(diff===0)return "Esta semana";
+  if(diff===1)return "Próxima semana";
+  if(diff===-1)return "Semana pasada";
+  return diff>0?"Dentro de "+diff+" semanas":"Hace "+(-diff)+" semanas";
+}
+function taskRow(who,t,w,mon){
+  var done=!!w.done[t],r=w.rate[t]||"",mine=me===who,canW=!!me&&!readOnly;
+  var def=TASKS[t];
+  var tag=t==="basura"?'<span class="tag">'+esc(fmt(addDays(mon,4),{weekday:"long",day:"numeric",month:"short"}).replace(",",""))+'</span>':"";
+  var pts=done?"+"+taskPts(w,t):"+"+def.pts;
+  var rate="";
+  if(done){
+    if(me&&me!==who&&!readOnly){
+      rate='<div class="rate" role="group" aria-label="Valorar '+esc(def.name)+'"><span class="who">Tu valoración del trabajo de '+esc(PEOPLE[who].name)+'</span>'+
+        Object.keys(RATES).map(function(k){
+          return '<button type="button" class="rb '+RATES[k].cls+'" data-act="rate" data-task="'+t+'" data-val="'+k+'" data-key="rate-'+who+t+k+'" aria-pressed="'+(r===k)+'"><i></i>'+RATES[k].label+'</button>';
+        }).join("")+'</div>';
+    }else if(r&&RATES[r]){
+      rate='<div class="rate"><span class="chip on '+RATES[r].cls+'"><i></i>'+RATES[r].label+'</span></div>';
+    }else{
+      rate='<div class="rate"><span class="chip none"><i></i>Sin valorar</span></div>';
+    }
+  }
+  var dis=(!(mine&&canW))?" disabled":"";
+  return '<li class="task" data-done="'+(done?1:0)+'">'+
+    '<button type="button" class="chk" data-act="toggle" data-task="'+t+'" data-key="chk-'+who+t+'" aria-pressed="'+done+'" aria-label="'+esc(def.name)+(done?", hecha":", pendiente")+'"'+dis+'>'+checkSvg()+'</button>'+
+    '<div><div class="tname">'+esc(def.name)+tag+'</div><div class="tsub">'+esc(def.sub)+'</div></div>'+
+    '<div class="pts">'+pts+'</div>'+rate+'</li>';
+}
+function personCard(who,mon){
+  var w=wk(isoId(mon)),list=assignment(mon)[who];
+  var n=list.filter(function(t){return w.done[t]}).length;
+  return '<section class="card person '+who+'" aria-label="Tareas de '+PEOPLE[who].name+'">'+
+    '<div class="phead"><div class="avatar" aria-hidden="true">'+PEOPLE[who].initial+'</div>'+
+    '<div class="nm"><h2>'+PEOPLE[who].name+(me===who?'<span class="you">tú</span>':"")+'</h2><span class="small muted">Tareas de la semana</span></div>'+
+    '<div class="cnt">'+n+'/'+list.length+'</div></div>'+
+    '<ul class="tasks">'+list.map(function(t){return taskRow(who,t,w,mon)}).join("")+'</ul></section>';
+}
+function scoreboard(mon){
+  var a=seasonPoints("alberto"),j=seasonPoints("jara"),tot=a+j;
+  var wa=weekPoints(mon,"alberto"),wj=weekPoints(mon,"jara");
+  var lead=a===j?"Van empatados":(a>j?"Alberto va por delante por "+(a-j)+" pts":"Jara va por delante por "+(j-a)+" pts");
+  var pct=Math.min(100,tot/LEVELS[LEVELS.length-1]*100);
+  var canEdit=!readOnly;
+  var lv=LEVELS.map(function(th,i){
+    var k="r"+(i+1),on=tot>=th;
+    return '<li class="lv'+(on?" on":"")+'"><span class="dot" aria-hidden="true">'+(on?'<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':"")+'</span>'+
+      '<span class="th">'+th+' pts</span>'+
+      '<input type="text" maxlength="90" data-cfg="'+k+'" data-key="cfg-'+k+'" value="'+esc(S.cfg[k])+'" aria-label="Premio del nivel '+(i+1)+(on?" (desbloqueado)":"")+'"'+(canEdit?"":" readonly")+'></li>';
+  }).join("");
+  return '<section class="card sec" aria-label="Marcador">'+
+    '<div><div class="kicker">Temporada desde la semana '+esc(S.cfg.season.split("-W")[1]||"")+'</div><h2>Marcador y premios</h2></div>'+
+    '<div class="score">'+
+      '<div class="sc alberto"><span class="nm">Alberto</span><span class="n">'+a+'</span><span class="small muted mono">+'+wa+' esta semana</span></div>'+
+      '<div class="sc jara"><span class="nm">Jara</span><span class="n">'+j+'</span><span class="small muted mono">+'+wj+' esta semana</span></div>'+
+    '</div>'+
+    '<p><b>'+lead+'.</b> <span class="muted">Los dos suman para la meta conjunta.</span></p>'+
+    '<div><div class="small muted mono" style="margin-bottom:6px">Meta conjunta '+tot+' / '+LEVELS[LEVELS.length-1]+' pts</div>'+
+    '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+LEVELS[LEVELS.length-1]+'" aria-valuenow="'+Math.min(tot,LEVELS[LEVELS.length-1])+'"><b style="width:'+pct+'%"></b></div></div>'+
+    '<ul class="levels">'+lv+'</ul>'+
+    '<div class="duel"><b>Duelo de la temporada</b><input type="text" maxlength="160" data-cfg="duel" data-key="cfg-duel" value="'+esc(S.cfg.duel)+'" aria-label="Premio del duelo"'+(canEdit?"":" readonly")+'><span class="small muted">Los textos de los premios se pueden editar.</span></div>'+
+    '</section>';
+}
+function rulesCard(){
+  return '<section class="card sec" aria-label="Cómo se puntúa"><h2>Cómo se puntúa</h2><div class="rules">'+
+    '<div><span><b>+10</b> tarea hecha</span><span class="small muted">Sacar la basura da +5.</span></div>'+
+    '<div><span><b>+5</b> valoración Bien</span><span class="small muted">Mejorable da +2, Mal da 0.</span></div>'+
+    '<div><span><b>+10</b> semana completa</span><span class="small muted">Todas hechas y ninguna valorada con Mal.</span></div>'+
+    '<div><span><b>Quién valora</b></span><span class="small muted">Cada persona valora solo las tareas hechas de la otra.</span></div>'+
+    '</div></section>';
+}
+function rotation(mon){
+  var rows="";
+  for(var i=0;i<4;i++){
+    var m=addDays(mon,7*i),a=assignment(m);
+    var cell=function(who){return a[who].map(function(t){return '<span class="tk">'+esc(TASKS[t].name)+'</span>'}).join("")};
+    rows+='<tr'+(i===0?' class="cur"':"")+'><td class="mono">'+esc(fmt(m,{day:"numeric",month:"short"}))+'</td><td>'+cell("alberto")+'</td><td>'+cell("jara")+'</td></tr>';
+  }
+  return '<section class="card sec" aria-label="Próximas semanas"><h2>Próximas semanas</h2><div class="tablewrap"><table><thead><tr><th>Semana del</th><th>Alberto</th><th>Jara</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
+function settingsCard(mon){
+  var head='<div class="actions"><button type="button" class="btn" data-act="settings" data-key="settings" aria-expanded="'+settingsOpen+'">'+(settingsOpen?"Cerrar ajustes":"Ajustes de temporada")+'</button></div>';
+  if(!settingsOpen)return '<section class="card sec">'+head+'</section>';
+  if(!ns){
+    var heavy=assignment(mon).alberto.indexOf("bano")>-1?"alberto":"jara";
+    ns={start:heavy,trash:S.cfg.trashFlip?"other":"heavy",confirm:false};
+  }
+  var ro=readOnly?" disabled":"";
+  function opt(name,val,label){return '<label class="opt"><input type="radio" name="'+name+'" value="'+val+'" data-ns="'+name+'" data-key="ns-'+name+val+'"'+(ns[name]===val?" checked":"")+ro+'><span>'+label+'</span></label>'}
+  return '<section class="card settings" aria-label="Ajustes de temporada">'+head+
+    '<p class="muted">Empezar una temporada pone el marcador a cero desde la semana que estás viendo ('+esc(fmt(mon,{day:"numeric",month:"short"}))+'). Las semanas anteriores no se borran.</p>'+
+    '<fieldset><legend>En esa semana, baño y lavadoras le tocan a</legend>'+opt("start","alberto","Alberto (Jara hace suelo y cocina)")+opt("start","jara","Jara (Alberto hace suelo y cocina)")+'</fieldset>'+
+    '<fieldset><legend>La basura del viernes la hace</legend>'+opt("trash","heavy","Quien tiene baño y lavadoras")+opt("trash","other","Quien tiene suelo y cocina")+'</fieldset>'+
+    (ns.confirm?
+      '<div class="banner"><p>Se pone el marcador a cero desde esta semana. ¿Seguro?</p><div class="actions"><button type="button" class="btn primary" data-act="ns-do" data-key="ns-do">Sí, empezar</button><button type="button" class="btn" data-act="ns-cancel" data-key="ns-cancel">Cancelar</button></div></div>':
+      '<div class="actions"><button type="button" class="btn primary" data-act="ns-go" data-key="ns-go"'+ro+'>Empezar nueva temporada</button></div>')+
+    '</section>';
+}
+function html(){
+  if(!viewMon)viewMon=startMon();
+  var mon=viewMon,id=isoId(mon),sun=addDays(mon,6);
+  var syncCls=(mode==="shared"&&online)?"":((mode==="local"||mode==="shared")?" local":" wait");
+  var syncTxt=mode==="shared"?(online?"Guardado compartido":"Sin conexión: se enviará al volver"):(mode==="local"?"Solo en este navegador":(mode==="login"?"Sin sesión":"Conectando"));
+  var out='<header class="top"><div class="title"><span class="kicker">Alberto y Jara</span><h1>Plan del hogar</h1>'+
+    '<span class="sync'+syncCls+'"><i></i>'+syncTxt+'</span></div>'+
+    '<div class="who-label"><span class="small muted">Este dispositivo es de</span><div class="seg" role="group" aria-label="Quién eres">'+
+    Object.keys(PEOPLE).map(function(k){return '<button type="button" data-act="me" data-who="'+k+'" data-key="me-'+k+'" aria-pressed="'+(me===k)+'">'+PEOPLE[k].name+'</button>'}).join("")+
+    '</div></div></header>';
+  if(mode==="local")out+='<div class="banner"><p>'+esc(localMsg)+'</p></div>';
+  if(syncNote)out+='<div class="banner"><p>'+esc(syncNote)+'</p></div>';
+  if(mode==="login")return out+loginCard();
+  if(mode==="loading")return out;
+  if(!me)out+='<section class="card pick"><h2>¿Quién eres en este dispositivo?</h2><p class="muted">Cada uno marca sus tareas y valora las de la otra persona.</p><div class="row">'+
+    Object.keys(PEOPLE).map(function(k){return '<button type="button" class="btn primary" data-act="me" data-who="'+k+'" data-key="pick-'+k+'">Soy '+PEOPLE[k].name+'</button>'}).join("")+'</div></section>';
+  out+='<section class="card weekbar" aria-label="Semana"><div class="lbl"><span class="kicker">'+esc(weekLabel(mon))+' · semana '+esc(id.split("-W")[1])+'</span>'+
+    '<span class="range">'+esc(fmt(mon,{day:"numeric",month:"short"}))+' – '+esc(fmt(sun,{day:"numeric",month:"short",year:"numeric"}))+'</span></div>'+
+    '<div class="nav"><button type="button" class="btn" data-act="prev" data-key="prev" aria-label="Semana anterior">←</button>'+
+    '<button type="button" class="btn" data-act="today" data-key="today">Hoy</button>'+
+    '<button type="button" class="btn" data-act="next" data-key="next" aria-label="Semana siguiente">→</button></div></section>';
+  if(id<S.cfg.season){
+    out+='<div class="banner"><p>Esta semana es anterior al inicio de la temporada y no suma al marcador.</p><button type="button" class="btn" data-act="first" data-key="first">Ir a la primera semana</button></div>';
+  }
+  out+='<div class="people">'+personCard("alberto",mon)+personCard("jara",mon)+'</div>';
+  out+=scoreboard(mon)+rulesCard()+rotation(mon)+settingsCard(mon);
+  if(mode==="shared")out+='<div class="actions"><button type="button" class="btn" data-act="logout" data-key="logout">Cerrar sesión</button></div>';
+  return out;
+}
+function render(){
+  var ae=document.activeElement;
+  if(ae&&ae.tagName==="INPUT"&&(ae.type==="text"||ae.type==="email"||ae.type==="password")){pending=true;return}
+  pending=false;
+  var key=ae&&ae.dataset?ae.dataset.key:null,y=window.scrollY;
+  app.innerHTML=html();
+  if(key){var el=app.querySelector('[data-key="'+key+'"]');if(el&&!el.disabled)el.focus({preventScroll:true})}
+  window.scrollTo(0,y);
+}
+
+/* eventos */
+document.addEventListener("focusout",function(e){
+  if(pending&&e.target&&e.target.tagName==="INPUT")setTimeout(function(){if(pending)render()},0);
+});
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-act]");
+  if(!b||b.disabled)return;
+  var act=b.dataset.act,id=isoId(viewMon);
+  if(act==="me"){me=b.dataset.who;lsSet("casa-me",me);render()}
+  else if(act==="prev"){viewMon=addDays(viewMon,-7);render()}
+  else if(act==="next"){viewMon=addDays(viewMon,7);render()}
+  else if(act==="today"){viewMon=startMon();render()}
+  else if(act==="first"){viewMon=monFromId(S.cfg.season)||startMon();render()}
+  else if(act==="toggle"){
+    var t=b.dataset.task,w=wk(id),nowDone=!w.done[t],p={done:{}};
+    p.done[t]=nowDone;
+    if(!nowDone){p.rate={};p.rate[t]=""}
+    patchWeek(id,p);
+  }
+  else if(act==="rate"){
+    var t2=b.dataset.task,v=b.dataset.val,cur=wk(id).rate[t2]||"",p2={rate:{}};
+    p2.rate[t2]=cur===v?"":v;
+    patchWeek(id,p2);
+  }
+  else if(act==="logout"){if(window.firebase)firebase.auth().signOut()}
+  else if(act==="settings"){settingsOpen=!settingsOpen;ns=null;render()}
+  else if(act==="ns-go"){ns.confirm=true;render()}
+  else if(act==="ns-cancel"){ns.confirm=false;render()}
+  else if(act==="ns-do"){
+    var n=weekN(viewMon),evenA=(((n%2)+2)%2)===0,wantA=ns.start==="alberto";
+    var patch={season:isoId(viewMon),flip:evenA!==wantA,trashFlip:ns.trash==="other"};
+    ns=null;settingsOpen=false;patchCfg(patch);
+  }
+});
+document.addEventListener("change",function(e){
+  var t=e.target;
+  if(t.dataset&&t.dataset.cfg){var p={};p[t.dataset.cfg]=t.value.trim()||DEFAULT_CFG[t.dataset.cfg];patchCfg(p)}
+  else if(t.dataset&&t.dataset.ns&&ns){ns[t.dataset.ns]=t.value}
+});
+
+/* arranque */
+function loadLocal(){
+  var raw=lsGet("casa-plan-v1");
+  if(!raw)return;
+  try{var d=JSON.parse(raw);S.cfg=Object.assign({},DEFAULT_CFG,d.cfg||{});S.weeks=d.weeks||{}}catch(e){}
+}
+function attach(){
+  if(attached)return;
+  attached=true;
+  var timer=setTimeout(function(){if(!firstSnap){syncNote="Todavía no se alcanzan los datos compartidos. Lo que ves puede estar desactualizado.";render()}},10000);
+  ref.on("value",function(snap){
+    var v=snap.val()||{},raw=v.weeks||{},w={};
+    Object.keys(raw).forEach(function(id){var x=raw[id]||{};w[id]={done:x.done||{},rate:x.rate||{}}});
+    S.cfg=Object.assign({},DEFAULT_CFG,v.cfg||{});
+    S.weeks=w;
+    clearTimeout(timer);
+    if(!firstSnap){firstSnap=true;viewMon=startMon()}
+    if(/Todavía/.test(syncNote))syncNote="";
+    render();
+  },function(err){
+    clearTimeout(timer);
+    syncNote=(err&&err.code==="PERMISSION_DENIED")?"Firebase no te deja leer los datos. Revisa las reglas de la base de datos y que tu correo esté en ellas.":"No se pudieron leer los datos compartidos.";
+    render();
+  });
+}
+function detach(){if(ref&&attached){ref.off();attached=false;firstSnap=false}}
+function connect(){
+  var c=window.PLAN_CONFIG&&window.PLAN_CONFIG.firebase;
+  if(!c||!c.apiKey||!c.databaseURL){mode="local";loadLocal();return}
+  if(typeof firebase==="undefined"){mode="local";localMsg="No se pudo cargar Firebase. Comprueba la conexión y recarga la página.";loadLocal();return}
+  try{
+    firebase.initializeApp(c);
+    var d=firebase.database();
+    ref=d.ref("hogar");
+    d.ref(".info/connected").on("value",function(sn){online=sn.val()===true;render()});
+    mode="loading";
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user){mode="shared";syncNote="";attach()}else{detach();mode="login"}
+      render();
+    });
+  }catch(e){mode="local";localMsg="No se pudo iniciar Firebase. Revisa el archivo config.js.";loadLocal()}
+}
+document.addEventListener("submit",function(e){
+  if(e.target.id!=="loginForm")return;
+  e.preventDefault();
+  var em=e.target.elements.em.value.trim().toLowerCase(),pw=e.target.elements.pw.value;
+  loginEm=em;loginErr="";
+  firebase.auth().signInWithEmailAndPassword(em,pw).catch(function(err){
+    loginErr=(err&&err.code==="auth/network-request-failed")?"Sin conexión. Inténtalo de nuevo.":"Correo o contraseña incorrectos.";
+    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    render();
+  });
+});
+me=lsGet("casa-me");
+if(me!=="alberto"&&me!=="jara")me=null;
+connect();
+viewMon=startMon();
+render();
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+})();
+</script>
+</body>
+</html>
