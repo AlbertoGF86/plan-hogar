@@ -158,6 +158,17 @@ legend{font-weight:600;padding:0;margin-bottom:6px}
 .login{display:flex;flex-direction:column;gap:14px;max-width:420px}
 .login label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
 .err{background:var(--red-soft);border-radius:8px;padding:8px 10px}
+.shop-add{display:flex;gap:8px}
+.shop-add input{flex:1 1 auto}
+.shop-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.shop-item{display:grid;grid-template-columns:40px 1fr auto 40px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.shop-item:first-child{border-top:0}
+.sbox{width:40px;height:40px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:transparent;display:grid;place-items:center;cursor:pointer;padding:0}
+.shop-item.bought .sbox{background:var(--btn);border-color:var(--btn);color:var(--btn-ink)}
+.shop-item.bought .st{color:var(--ink-2);text-decoration:line-through}
+.st{min-width:0;overflow-wrap:anywhere}
+.who-chip{font-size:12px;color:var(--ink-2)}
+.xbtn{border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:22px;line-height:1;width:40px;height:40px;cursor:pointer;border-radius:10px}
 @media (prefers-reduced-motion:no-preference){.chk,.rb,.bar b{transition:background .15s,border-color .15s,width .3s}}
 </style>
 
@@ -177,7 +188,9 @@ var TASKS={
   lavadoras:{name:"Lavadoras",sub:"Poner, tender y doblar la colada de la semana",pts:10},
   suelo:{name:"Suelo",sub:"Aspirar y fregar la casa",pts:10},
   cocina:{name:"Cocina",sub:"Encimera, fuegos, fregadero y suelo",pts:10},
-  basura:{name:"Sacar la basura",sub:"Cada viernes",pts:5}
+  basura:{name:"Sacar la basura",sub:"Cada viernes",pts:5},
+  sabanas_alberto:{name:"Cambio de sábanas",sub:"Cada 2 semanas, los dos",pts:5},
+  sabanas_jara:{name:"Cambio de sábanas",sub:"Cada 2 semanas, los dos",pts:5}
 };
 var RATES={rojo:{label:"Mal",cls:"r",bonus:0},amarillo:{label:"Mejorable",cls:"a",bonus:2},verde:{label:"Bien",cls:"g",bonus:5}};
 var LEVELS=[100,200,300,400,500];
@@ -192,7 +205,7 @@ var REF=new Date(2026,10,2);
 var DAY=864e5;
 var app=document.getElementById("app");
 
-var S={cfg:Object.assign({},DEFAULT_CFG),weeks:{}};
+var S={cfg:Object.assign({},DEFAULT_CFG),weeks:{},shop:{}};
 var me=null,db=null,mode="loading",readOnly=false,syncNote="",synced=false,pending=false;
 var viewMon=null,settingsOpen=false,ns=null,queues={};
 
@@ -222,6 +235,7 @@ function assignment(mon){
   out[heavy].push("bano","lavadoras");
   out[other].push("suelo","cocina");
   out[trash].push("basura");
+  if((((n%2)+2)%2)===0){out.alberto.push("sabanas_alberto");out.jara.push("sabanas_jara")}
   return out;
 }
 function wk(id){var w=S.weeks[id];return w?{done:w.done||{},rate:w.rate||{}}:{done:{},rate:{}}}
@@ -251,7 +265,7 @@ function seasonPoints(who){
 /* guardado */
 var localMsg="Falta conectar Firebase (archivo config.js). Mientras tanto, los datos solo se guardan en este navegador.";
 var ref=null,online=true,attached=false,firstSnap=false,loginErr="",loginEm="";
-function saveLocal(){lsSet("casa-plan-v1",JSON.stringify({cfg:S.cfg,weeks:S.weeks}))}
+function saveLocal(){lsSet("casa-plan-v1",JSON.stringify({cfg:S.cfg,weeks:S.weeks,shop:S.shop}))}
 function flatten(prefix,obj,out){for(var k in obj){var v=obj[k];if(v&&typeof v==="object")flatten(prefix+k+"/",v,out);else out[prefix+k]=v}return out}
 function writeFailed(e){
   if(e&&(e.code==="PERMISSION_DENIED"||/permission_denied/i.test(e.message||""))){
@@ -261,6 +275,7 @@ function writeFailed(e){
 }
 function send(updates){
   if(mode!=="shared"||!ref){saveLocal();return}
+  if(!Object.keys(updates).length)return;
   ref.update(updates).catch(writeFailed);
 }
 function patchWeek(id,patch){
@@ -280,6 +295,46 @@ function loginCard(){
     '<label for="em">Correo<input type="email" id="em" name="em" autocomplete="username" autocapitalize="none" inputmode="email" value="'+esc(loginEm)+'" required></label>'+
     '<label for="pw">Contraseña<input type="password" id="pw" name="pw" autocomplete="current-password" required></label>'+
     '<button type="submit" class="btn primary" data-key="login" style="min-height:48px;font-size:16px">Entrar</button></form></section>';
+}
+
+/* compra */
+function shopItemsHtml(){
+  var ids=Object.keys(S.shop).filter(function(id){return S.shop[id]&&S.shop[id].t});
+  ids.sort(function(a,b){var x=S.shop[a],y=S.shop[b];if(!!x.done!==!!y.done)return x.done?1:-1;return (x.at||0)-(y.at||0)});
+  if(!ids.length)return '<li class="small muted" style="padding:6px 0">No hay nada pendiente. Añade lo que falte en casa.</li>';
+  var chk='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return ids.map(function(id){
+    var it=S.shop[id],by=PEOPLE[it.by],dis=readOnly?" disabled":"";
+    return '<li class="shop-item'+(it.done?" bought":"")+'">'+
+      '<button type="button" class="sbox" data-act="shop-toggle" data-id="'+esc(id)+'" data-key="sh-'+esc(id)+'" aria-pressed="'+(!!it.done)+'" aria-label="'+esc(it.t)+(it.done?", comprado":", pendiente")+'"'+dis+'>'+chk+'</button>'+
+      '<span class="st">'+esc(it.t)+'</span>'+
+      '<span class="who-chip">'+(by?esc(by.name):"")+'</span>'+
+      '<button type="button" class="xbtn" data-act="shop-del" data-id="'+esc(id)+'" data-key="shd-'+esc(id)+'" aria-label="Borrar '+esc(it.t)+'"'+dis+'>×</button></li>';
+  }).join("");
+}
+function shopCard(){
+  var ids=Object.keys(S.shop).filter(function(id){return S.shop[id]&&S.shop[id].t});
+  var n=ids.filter(function(id){return !S.shop[id].done}).length;
+  var any=ids.some(function(id){return S.shop[id].done});
+  var dis=readOnly?" disabled":"";
+  return '<section class="card sec" aria-label="Lista de la compra"><div><div class="kicker">'+n+(n===1?" pendiente":" pendientes")+'</div><h2>Hay que comprar</h2></div>'+
+    '<form class="shop-add" id="shopForm" novalidate><input type="text" id="shopIt" name="it" maxlength="80" placeholder="Añadir algo, por ejemplo detergente" autocomplete="off" aria-label="Qué hace falta comprar"'+dis+'>'+
+    '<button type="submit" class="btn primary" data-key="shop-add"'+dis+'>Añadir</button></form>'+
+    '<ul class="shop-list" id="shopList">'+shopItemsHtml()+'</ul>'+
+    (any?'<div class="actions"><button type="button" class="btn" data-act="shop-clear" data-key="shop-clear"'+dis+'>Borrar los comprados</button></div>':"")+
+    '</section>';
+}
+function renderShop(){var el=document.getElementById("shopList");if(el)el.innerHTML=shopItemsHtml()}
+function addShop(inp){
+  var text=(inp.value||"").trim().slice(0,80);
+  if(!text)return;
+  var id=(mode==="shared"&&ref)?ref.child("compras").push().key:"i"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  var item={t:text,by:me||"",done:false,at:Date.now()},u={};
+  S.shop[id]=item;
+  u["compras/"+id]=item;
+  inp.value="";
+  render();
+  send(u);
 }
 
 /* vista */
@@ -351,7 +406,7 @@ function scoreboard(mon){
 }
 function rulesCard(){
   return '<section class="card sec" aria-label="Cómo se puntúa"><h2>Cómo se puntúa</h2><div class="rules">'+
-    '<div><span><b>+10</b> tarea hecha</span><span class="small muted">Sacar la basura da +5.</span></div>'+
+    '<div><span><b>+10</b> tarea hecha</span><span class="small muted">Sacar la basura y cambiar las sábanas dan +5.</span></div>'+
     '<div><span><b>+5</b> valoración Bien</span><span class="small muted">Mejorable da +2, Mal da 0.</span></div>'+
     '<div><span><b>+10</b> semana completa</span><span class="small muted">Todas hechas y ninguna valorada con Mal.</span></div>'+
     '<div><span><b>Quién valora</b></span><span class="small muted">Cada persona valora solo las tareas hechas de la otra.</span></div>'+
@@ -409,13 +464,14 @@ function html(){
     out+='<div class="banner"><p>Esta semana es anterior al inicio de la temporada y no suma al marcador.</p><button type="button" class="btn" data-act="first" data-key="first">Ir a la primera semana</button></div>';
   }
   out+='<div class="people">'+personCard("alberto",mon)+personCard("jara",mon)+'</div>';
+  out+=shopCard();
   out+=scoreboard(mon)+rulesCard()+rotation(mon)+settingsCard(mon);
   if(mode==="shared")out+='<div class="actions"><button type="button" class="btn" data-act="logout" data-key="logout">Cerrar sesión</button></div>';
   return out;
 }
 function render(){
   var ae=document.activeElement;
-  if(ae&&ae.tagName==="INPUT"&&(ae.type==="text"||ae.type==="email"||ae.type==="password")){pending=true;return}
+  if(ae&&ae.tagName==="INPUT"&&(ae.type==="text"||ae.type==="email"||ae.type==="password")){pending=true;renderShop();return}
   pending=false;
   var key=ae&&ae.dataset?ae.dataset.key:null,y=window.scrollY;
   app.innerHTML=html();
@@ -447,6 +503,18 @@ document.addEventListener("click",function(e){
     p2.rate[t2]=cur===v?"":v;
     patchWeek(id,p2);
   }
+  else if(act==="shop-toggle"){
+    var it=S.shop[b.dataset.id];
+    if(it){var nv=!it.done,u1={};it.done=nv;u1["compras/"+b.dataset.id+"/done"]=nv;render();send(u1)}
+  }
+  else if(act==="shop-del"){
+    var u2={};delete S.shop[b.dataset.id];u2["compras/"+b.dataset.id]=null;render();send(u2);
+  }
+  else if(act==="shop-clear"){
+    var u3={};
+    Object.keys(S.shop).forEach(function(k){if(S.shop[k]&&S.shop[k].done){delete S.shop[k];u3["compras/"+k]=null}});
+    render();send(u3);
+  }
   else if(act==="logout"){if(window.firebase)firebase.auth().signOut()}
   else if(act==="settings"){settingsOpen=!settingsOpen;ns=null;render()}
   else if(act==="ns-go"){ns.confirm=true;render()}
@@ -467,7 +535,7 @@ document.addEventListener("change",function(e){
 function loadLocal(){
   var raw=lsGet("casa-plan-v1");
   if(!raw)return;
-  try{var d=JSON.parse(raw);S.cfg=Object.assign({},DEFAULT_CFG,d.cfg||{});S.weeks=d.weeks||{}}catch(e){}
+  try{var d=JSON.parse(raw);S.cfg=Object.assign({},DEFAULT_CFG,d.cfg||{});S.weeks=d.weeks||{};S.shop=d.shop||{}}catch(e){}
 }
 function attach(){
   if(attached)return;
@@ -477,7 +545,7 @@ function attach(){
     var v=snap.val()||{},raw=v.weeks||{},w={};
     Object.keys(raw).forEach(function(id){var x=raw[id]||{};w[id]={done:x.done||{},rate:x.rate||{}}});
     S.cfg=Object.assign({},DEFAULT_CFG,v.cfg||{});
-    S.weeks=w;
+    S.weeks=w;S.shop=v.compras||{};
     clearTimeout(timer);
     if(!firstSnap){firstSnap=true;viewMon=startMon()}
     if(/Todavía/.test(syncNote))syncNote="";
@@ -506,6 +574,7 @@ function connect(){
   }catch(e){mode="local";localMsg="No se pudo iniciar Firebase. Revisa el archivo config.js.";loadLocal()}
 }
 document.addEventListener("submit",function(e){
+  if(e.target.id==="shopForm"){e.preventDefault();addShop(e.target.elements.it);return}
   if(e.target.id!=="loginForm")return;
   e.preventDefault();
   var em=e.target.elements.em.value.trim().toLowerCase(),pw=e.target.elements.pw.value;
