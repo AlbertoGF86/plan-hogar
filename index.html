@@ -190,7 +190,8 @@ var TASKS={
   cocina:{name:"Cocina",sub:"Encimera, fuegos, fregadero y suelo",pts:10},
   basura:{name:"Sacar la basura",sub:"Cada viernes",pts:5},
   sabanas_alberto:{name:"Cambio de sábanas",sub:"Cada 2 semanas, los dos",pts:5},
-  sabanas_jara:{name:"Cambio de sábanas",sub:"Cada 2 semanas, los dos",pts:5}
+  sabanas_jara:{name:"Cambio de sábanas",sub:"Cada 2 semanas, los dos",pts:5},
+  polvo:{name:"Limpiar el polvo",sub:"Una vez al mes, un mes cada uno",pts:10}
 };
 var RATES={rojo:{label:"Mal",cls:"r",bonus:0},amarillo:{label:"Mejorable",cls:"a",bonus:2},verde:{label:"Bien",cls:"g",bonus:5}};
 var LEVELS=[100,200,300,400,500];
@@ -236,6 +237,9 @@ function assignment(mon){
   out[other].push("suelo","cocina");
   out[trash].push("basura");
   if((((n%2)+2)%2)===0){out.alberto.push("sabanas_alberto");out.jara.push("sabanas_jara")}
+  /* polvo: primera semana de cada mes (la que tiene su jueves entre los días 1 y 7), alternando por mes */
+  var th=addDays(mon,3);
+  if(th.getDate()<=7){out[((th.getFullYear()*12+th.getMonth())%2===0)?"jara":"alberto"].push("polvo")}
   return out;
 }
 function wk(id){var w=S.weeks[id];return w?{done:w.done||{},rate:w.rate||{}}:{done:{},rate:{}}}
@@ -406,7 +410,7 @@ function scoreboard(mon){
 }
 function rulesCard(){
   return '<section class="card sec" aria-label="Cómo se puntúa"><h2>Cómo se puntúa</h2><div class="rules">'+
-    '<div><span><b>+10</b> tarea hecha</span><span class="small muted">Sacar la basura y cambiar las sábanas dan +5.</span></div>'+
+    '<div><span><b>+10</b> tarea hecha</span><span class="small muted">Sacar la basura y cambiar las sábanas dan +5. Limpiar el polvo (una vez al mes) da +10.</span></div>'+
     '<div><span><b>+5</b> valoración Bien</span><span class="small muted">Mejorable da +2, Mal da 0.</span></div>'+
     '<div><span><b>+10</b> semana completa</span><span class="small muted">Todas hechas y ninguna valorada con Mal.</span></div>'+
     '<div><span><b>Quién valora</b></span><span class="small muted">Cada persona valora solo las tareas hechas de la otra.</span></div>'+
